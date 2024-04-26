@@ -44,14 +44,14 @@ jobs:
         restore-keys: ${{ runner.os }}-node-
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@cdcdbb579706841c47f7063dda365e292e5cad7a # v2.13.4
+      uses: github/codeql-action/init@d39d31e687223d841ef683f52467bd88e9b21c14 # v2.13.4
       with:
         languages: 'javascript'
 
     - name: Autobuild
-      uses: github/codeql-action/autobuild@cdcdbb579706841c47f7063dda365e292e5cad7a # v2.13.4
+      uses: github/codeql-action/autobuild@d39d31e687223d841ef683f52467bd88e9b21c14 # v2.13.4
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@cdcdbb579706841c47f7063dda365e292e5cad7a # v2.13.4
+      uses: github/codeql-action/analyze@d39d31e687223d841ef683f52467bd88e9b21c14 # v2.13.4
       with:
         category: "/language:javascript"
