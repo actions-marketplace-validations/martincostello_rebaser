@@ -3,6 +3,7 @@
 
 import * as core from '@actions/core';
 
+import { exec } from '@actions/exec';
 import { join } from 'path';
 
 /* eslint-disable-next-line import/named */
@@ -15,7 +16,7 @@ async function rebase(git: SimpleGit, options: TaskOptions): Promise<RebaseResul
     const result = await git.rebase(options);
     core.debug(`Rebase result:\n${result}`);
     return result?.includes('up to date') ? RebaseResult.upToDate : RebaseResult.success;
-  } catch (error: any) {
+  } catch (error) {
     core.debug(`Rebase failed:\n${error}`);
     return RebaseResult.conflicts;
   }
@@ -34,12 +35,12 @@ async function getFilesWithConflicts(git: SimpleGit, repository: string): Promis
 }
 
 export async function tryRebase(options: {
-  branch: string;
+  targetBranch: string;
   repository: string;
   userEmail: string;
   userName: string;
 }): Promise<RebaseResult> {
-  core.debug(`Rebasing '${options.branch}' branch in '${options.repository}'`);
+  core.debug(`Rebasing onto '${options.targetBranch}' branch in '${options.repository}'`);
 
   const git = simpleGit({
     baseDir: options.repository,
@@ -51,7 +52,9 @@ export async function tryRebase(options: {
   });
 
   let result = RebaseResult.success;
-  let rebaseOptions = [options.branch];
+  let rebaseOptions = [options.targetBranch];
+
+  const isInteractive = process.env.REBASER_INTERACTIVE === 'true' && process.env.GITHUB_ACTIONS !== 'true';
 
   try {
     while ((result = await rebase(git, rebaseOptions)) === RebaseResult.conflicts) {
@@ -68,8 +71,16 @@ export async function tryRebase(options: {
       for (const file of filesWithConflicts) {
         resolved = await tryResolveConflicts(file);
         if (!resolved) {
-          core.warning(`Failed to resolve conflicts in '${file}'.`);
-          break;
+          if (isInteractive) {
+            if ((await exec('code', [file, '--wait'])) !== 0) {
+              core.warning(`Unable to resolve merge conflict in ${file} using Visual Studio Code.`);
+              break;
+            }
+            resolved = true;
+          } else {
+            core.warning(`Failed to resolve conflicts in '${file}'.`);
+            break;
+          }
         }
       }
 
@@ -90,26 +101,25 @@ export async function tryRebase(options: {
 
   switch (result) {
     case RebaseResult.conflicts:
-      core.warning(`${options.branch} could not be rebased due to conflicts that could not be automatically resolved.`);
+      core.warning(`Could not rebase onto ${options.targetBranch} due to conflicts that could not be automatically resolved.`);
       break;
 
     case RebaseResult.error:
-      core.error(`Failed to rebase ${options.branch} due to an error.`);
+      core.error(`Failed to rebase onto ${options.targetBranch} due to an error.`);
       break;
 
     case RebaseResult.success:
-      core.info(`${options.branch} was successfully rebased.`);
+      core.info(`Successfully rebased onto ${options.targetBranch}.`);
       break;
 
     case RebaseResult.upToDate:
-      core.info(`${options.branch} is already up to date.`);
+      core.info(`Already up to date with ${options.targetBranch}.`);
       break;
   }
 
   return result;
 }
 
-// eslint-disable-next-line no-shadow
 export enum RebaseResult {
   upToDate = 'upToDate',
   success = 'success',

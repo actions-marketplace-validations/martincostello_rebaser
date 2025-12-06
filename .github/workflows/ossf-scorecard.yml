@@ -8,7 +8,7 @@ on:
     - cron: '0 5 * * MON'
   workflow_dispatch:
 
-permissions: read-all
+permissions: read-all # zizmor: ignore[excessive-permissions] Recommended permissions for OSSF Scorecard
 
 jobs:
   analysis:
@@ -21,26 +21,27 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
+          filter: 'tree:0'
           persist-credentials: false
+          show-progress: false
 
       - name: Run analysis
-        uses: ossf/scorecard-action@08b4669551908b1024bb425080c797723083c031 # v2.2.0
+        uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a # v2.4.3
         with:
           publish_results: true
-          repo_token: ${{ secrets.OSSF_SCORECARD_TOKEN }}
           results_file: results.sarif
           results_format: sarif
 
       - name: Upload artifact
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: SARIF
           path: results.sarif
           retention-days: 5
 
       - name: Upload to code-scanning
-        uses: github/codeql-action/upload-sarif@cdcdbb579706841c47f7063dda365e292e5cad7a # v2.13.4
+        uses: github/codeql-action/upload-sarif@cf1bb45a277cb3c205638b2cd5c984db1c46a412 # v4.31.7
         with:
           sarif_file: results.sarif

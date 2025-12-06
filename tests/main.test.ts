@@ -2,7 +2,7 @@
 // Licensed under the Apache 2.0 license. See the LICENSE file in the project root for full license information.
 
 import * as core from '@actions/core';
-import { afterAll, beforeAll, describe, expect, test } from '@jest/globals';
+import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { ActionFixture } from './ActionFixture';
 
 describe('rebaser', () => {
@@ -78,6 +78,64 @@ describe('rebaser', () => {
     });
   });
 
+  describe('when Directory.Packages.props has conflicts from an MSBuild property', () => {
+    let fixture: ActionFixture;
+
+    beforeAll(async () => {
+      fixture = await runFixture('MSBuildProperty');
+    }, rebaseTimeout);
+
+    afterAll(async () => {
+      await fixture?.destroy();
+    });
+
+    test('generates no errors', () => {
+      expect(core.error).toHaveBeenCalledTimes(0);
+      expect(core.setFailed).toHaveBeenCalledTimes(0);
+    });
+
+    test('outputs the correct result', () => {
+      expect(fixture.getOutput('result')).toBe('success');
+    });
+
+    test('rebases the branch', async () => {
+      expect(await fixture.commitHistory(3)).toEqual(['Apply target', 'Apply patch', 'Apply base']);
+    });
+
+    test('matches the snapshot', async () => {
+      expect(await fixture.getFileContent('Directory.Packages.props')).toMatchSnapshot();
+    });
+  });
+
+  describe('when Dockerfile has conflicts', () => {
+    let fixture: ActionFixture;
+
+    beforeAll(async () => {
+      fixture = await runFixture('Dockerfile');
+    }, rebaseTimeout);
+
+    afterAll(async () => {
+      await fixture?.destroy();
+    });
+
+    test('generates no errors', () => {
+      expect(core.error).toHaveBeenCalledTimes(0);
+      expect(core.setFailed).toHaveBeenCalledTimes(0);
+    });
+
+    test('outputs the correct result', () => {
+      expect(fixture.getOutput('result')).toBe('success');
+    });
+
+    test('rebases the branch', async () => {
+      expect(await fixture.commitHistory(3)).toEqual(['Apply target', 'Apply patch', 'Apply base']);
+    });
+
+    test('matches the snapshot', async () => {
+      expect(await fixture.getFileContent('Dockerfile')).toMatchSnapshot();
+    });
+  });
+
   describe('when package.json has conflicts', () => {
     let fixture: ActionFixture;
 
@@ -136,14 +194,7 @@ describe('rebaser', () => {
     });
 
     test('matches the snapshot', async () => {
-      expect(await fixture.getFileContent('Project/Project.csproj')).toMatchInlineSnapshot(`
-"<Project>
-  <ItemGroup>
-    <PackageVersion Include="System.Text.Json" Version="8.0.0-preview.6.23329.7" />
-  </ItemGroup>
-</Project>
-"
-`);
+      expect(await fixture.getFileContent('Project/Project.csproj')).toMatchSnapshot();
     });
   });
 
@@ -172,18 +223,131 @@ describe('rebaser', () => {
     });
 
     test('SDK matches the snapshot', async () => {
-      expect(await fixture.getFileContent('global.json')).toMatchInlineSnapshot(`
-"{
-  "sdk": {
-    "version": "8.0.100-preview.6.23330.14"
-  }
-}
-"
-`);
+      expect(await fixture.getFileContent('global.json')).toMatchSnapshot();
     });
 
     test('packages matches the snapshot', async () => {
       expect(await fixture.getFileContent('Directory.Packages.props')).toMatchSnapshot();
+    });
+  });
+
+  describe('when a the number of lines in the diff is uneven', () => {
+    let fixture: ActionFixture;
+
+    beforeAll(async () => {
+      fixture = await runFixture('Uneven');
+    }, rebaseTimeout);
+
+    afterAll(async () => {
+      await fixture?.destroy();
+    });
+
+    test('generates no errors', () => {
+      expect(core.error).toHaveBeenCalledTimes(0);
+      expect(core.setFailed).toHaveBeenCalledTimes(0);
+    });
+
+    test('outputs the correct result', () => {
+      expect(fixture.getOutput('result')).toBe('success');
+    });
+
+    test('rebases the branch', async () => {
+      expect(await fixture.commitHistory(3)).toEqual(['Apply target', 'Apply patch', 'Apply base']);
+    });
+
+    test('packages matches the snapshot', async () => {
+      expect(await fixture.getFileContent('Directory.Packages.props')).toMatchSnapshot();
+    });
+  });
+
+  describe('when a line is added', () => {
+    let fixture: ActionFixture;
+
+    beforeAll(async () => {
+      fixture = await runFixture('AddedLine');
+    }, rebaseTimeout);
+
+    afterAll(async () => {
+      await fixture?.destroy();
+    });
+
+    test('generates no errors', () => {
+      expect(core.error).toHaveBeenCalledTimes(0);
+      expect(core.setFailed).toHaveBeenCalledTimes(0);
+    });
+
+    test('outputs the correct result', () => {
+      expect(fixture.getOutput('result')).toBe('success');
+    });
+
+    test('rebases the branch', async () => {
+      expect(await fixture.commitHistory(3)).toEqual(['Apply target', 'Apply patch', 'Apply base']);
+    });
+
+    test('packages matches the snapshot', async () => {
+      expect(await fixture.getFileContent('Directory.Packages.props')).toMatchSnapshot();
+    });
+  });
+
+  describe('when a line is deleted', () => {
+    let fixture: ActionFixture;
+
+    beforeAll(async () => {
+      fixture = await runFixture('DeletedLine');
+    }, rebaseTimeout);
+
+    afterAll(async () => {
+      await fixture?.destroy();
+    });
+
+    test('generates no errors', () => {
+      expect(core.error).toHaveBeenCalledTimes(0);
+      expect(core.setFailed).toHaveBeenCalledTimes(0);
+    });
+
+    test('outputs the correct result', () => {
+      expect(fixture.getOutput('result')).toBe('success');
+    });
+
+    test('rebases the branch', async () => {
+      expect(await fixture.commitHistory(3)).toEqual(['Apply target', 'Apply patch', 'Apply base']);
+    });
+
+    test('packages matches the snapshot', async () => {
+      expect(await fixture.getFileContent('Directory.Packages.props')).toMatchSnapshot();
+    });
+  });
+
+  describe('when a prerelease has conflicts', () => {
+    let fixture: ActionFixture;
+
+    beforeAll(async () => {
+      fixture = await runFixture('Prerelease');
+    }, rebaseTimeout);
+
+    afterAll(async () => {
+      await fixture?.destroy();
+    });
+
+    test('generates no errors', () => {
+      expect(core.error).toHaveBeenCalledTimes(0);
+      expect(core.setFailed).toHaveBeenCalledTimes(0);
+    });
+
+    test('outputs the correct result', () => {
+      expect(fixture.getOutput('result')).toBe('success');
+    });
+
+    test('rebases the branch', async () => {
+      expect(await fixture.commitHistory(3)).toEqual(['Apply target', 'Apply patch', 'Apply base']);
+    });
+
+    test('matches the snapshot', async () => {
+      expect(await fixture.getFileContent('global.json')).toMatchSnapshot();
+    });
+
+    test('matches the snapshot', async () => {
+      expect(await fixture.getFileContent('Project.csproj')).toMatchSnapshot();
     });
   });
 
@@ -247,4 +411,30 @@ describe('rebaser', () => {
       expect(await fixture.getFileContent('Directory.Packages.props')).toMatchSnapshot();
     });
   });
+
+  describe.skip.each([['', '', '']])(
+    'when an existing repository is rebased',
+    (repository: string, baseBranch: string, targetBranch: string) => {
+      let fixture: ActionFixture;
+
+      beforeAll(async () => {
+        fixture = new ActionFixture(baseBranch, targetBranch);
+        await fixture.initialize(repository);
+        await fixture.run();
+      }, rebaseTimeout);
+
+      afterAll(async () => {
+        await fixture?.destroy();
+      });
+
+      test('generates no errors', () => {
+        expect(core.error).toHaveBeenCalledTimes(0);
+        expect(core.setFailed).toHaveBeenCalledTimes(0);
+      });
+
+      test('outputs the correct result', () => {
+        expect(fixture.getOutput('result')).toBe('success');
+      });
+    }
+  );
 });

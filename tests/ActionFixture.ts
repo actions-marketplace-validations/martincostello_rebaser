@@ -6,7 +6,7 @@ import * as fs from 'fs';
 import * as io from '@actions/io';
 import * as os from 'os';
 import * as path from 'path';
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 import {
   checkoutBranch,
   commitChanges,
@@ -19,31 +19,39 @@ import {
 import { run } from '../src/main';
 
 export class ActionFixture {
+  public stepSummary: string = '';
   public baseBranch: string;
   public targetBranch: string;
+  private repository: string = '';
   private tempDir: string = '';
-  private githubStepSummary: string = '';
   private outputPath: string = '';
   private outputs: Record<string, string> = {};
 
-  constructor() {
+  constructor(baseBranch = '', targetBranch = '') {
     const randomString = () => Math.random().toString(36).substring(7);
-    this.baseBranch = `base-${randomString()}`;
-    this.targetBranch = `target-${randomString()}`;
+    this.baseBranch = baseBranch || `base-${randomString()}`;
+    this.targetBranch = targetBranch || `target-${randomString()}`;
   }
 
   get path(): string {
-    return this.tempDir;
+    return this.repository;
   }
 
-  async initialize(): Promise<void> {
+  async initialize(repository = ''): Promise<void> {
     this.tempDir = await createTemporaryDirectory();
-    this.githubStepSummary = path.join(this.tempDir, 'github-step-summary.md');
-    this.outputPath = path.join(this.tempDir, 'github-outputs');
 
-    await createEmptyFile(this.githubStepSummary);
+    if (repository) {
+      this.repository = repository;
+    } else {
+      this.repository = this.tempDir;
+    }
+
+    this.outputPath = path.join(this.tempDir, 'github-outputs');
     await createEmptyFile(this.outputPath);
-    await createGitRepo(this.tempDir);
+
+    if (!repository) {
+      await createGitRepo(this.tempDir);
+    }
 
     this.setupEnvironment();
     this.setupMocks();
@@ -96,8 +104,7 @@ export class ActionFixture {
   async run(): Promise<void> {
     await run();
 
-    const buffer = await fs.promises.readFile(this.outputPath);
-    const content = buffer.toString();
+    const content = await fs.promises.readFile(this.outputPath, 'utf8');
 
     const lines = content.split(os.EOL);
     for (let index = 0; index < lines.length; index += 3) {
@@ -108,7 +115,7 @@ export class ActionFixture {
   }
 
   async reset(): Promise<void> {
-    await createEmptyFile(this.githubStepSummary);
+    this.stepSummary = '';
     await createEmptyFile(this.outputPath);
     this.outputs = {};
   }
@@ -127,7 +134,7 @@ export class ActionFixture {
   }
 
   getFileName(name: string): string {
-    return path.join(this.tempDir, name);
+    return path.join(this.repository, name);
   }
 
   getOutput(name: string): string {
@@ -164,9 +171,8 @@ export class ActionFixture {
   private setupEnvironment(): void {
     const inputs = {
       GITHUB_OUTPUT: this.outputPath,
-      GITHUB_STEP_SUMMARY: this.githubStepSummary,
       INPUT_BRANCH: this.baseBranch,
-      INPUT_REPOSITORY: this.tempDir,
+      INPUT_REPOSITORY: this.repository,
       RUNNER_DEBUG: '1',
     };
 
@@ -176,7 +182,7 @@ export class ActionFixture {
   }
 
   private setupMocks(): void {
-    jest.spyOn(core, 'setFailed').mockImplementation(() => {});
+    vi.spyOn(core, 'setFailed').mockImplementation(() => {});
     this.setupLogging();
   }
 
@@ -185,20 +191,26 @@ export class ActionFixture {
       console.debug(`[${level}] ${arg}`);
     };
 
-    jest.spyOn(core, 'debug').mockImplementation((arg) => {
+    vi.spyOn(core, 'debug').mockImplementation((arg) => {
       logger('debug', arg);
     });
-    jest.spyOn(core, 'info').mockImplementation((arg) => {
+    vi.spyOn(core, 'info').mockImplementation((arg) => {
       logger('info', arg);
     });
-    jest.spyOn(core, 'notice').mockImplementation((arg) => {
+    vi.spyOn(core, 'notice').mockImplementation((arg) => {
       logger('notice', arg);
     });
-    jest.spyOn(core, 'warning').mockImplementation((arg) => {
+    vi.spyOn(core, 'warning').mockImplementation((arg) => {
       logger('warning', arg);
     });
-    jest.spyOn(core, 'error').mockImplementation((arg) => {
+    vi.spyOn(core, 'error').mockImplementation((arg) => {
       logger('error', arg);
     });
+
+    vi.spyOn(core.summary, 'addRaw').mockImplementation((text: string) => {
+      this.stepSummary += text;
+      return core.summary;
+    });
+    vi.spyOn(core.summary, 'write').mockReturnThis();
   }
 }
