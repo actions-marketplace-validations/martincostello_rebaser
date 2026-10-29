@@ -33,7 +33,7 @@ jobs:
           - os: macos-26
             os-name: macos
           # renovate: datasource=github-runners depType=github-runner
-          - os: ubuntu-24.04
+          - os: ubuntu-26.04
             os-name: linux
           # renovate: datasource=github-runners depType=github-runner
           - os: windows-2025
@@ -49,9 +49,9 @@ jobs:
         show-progress: false
 
     - name: Setup Node
-      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
-        node-version: '24.x'
+        node-version: '26.x'
 
     - name: Install packages
       run: npm ci
@@ -60,13 +60,13 @@ jobs:
       shell: pwsh
       run: ./build.ps1
 
-    - uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+    - uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
       name: Upload coverage to Codecov
       with:
         flags: ${{ matrix.os-name }}
 
     - name: Generate SBOM
-      uses: anchore/sbom-action@aa80c8c5bd439a416a62804f2151ab38c671a638 # v0.24.1
+      uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
       if: runner.os == 'Linux'
       with:
         artifact-name: rebaser.spdx.json
@@ -82,7 +82,7 @@ jobs:
         subject-path: ./dist/**/*.js
 
   lint:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
 
     permissions:
       actions: read
@@ -107,12 +107,12 @@ jobs:
         args: -color
 
     - name: Lint workflows with zizmor
-      uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054 # v0.6.2
+      uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
       with:
         persona: pedantic
 
     - name: Lint PowerShell in workflows
-      uses: martincostello/lint-actions-powershell@e088367ebeb113cd7c1ebee5c541175d93e945b7 # v1.0.1
+      uses: martincostello/lint-actions-powershell@a16e0262b175979d7de6d719f08500049c1c2f45 # v1.0.2
       with:
         powershell-yaml-version: ${{ env.POWERSHELL_YAML_VERSION }}
         psscriptanalyzer-version: ${{ env.PSSCRIPTANALYZER_VERSION }}
